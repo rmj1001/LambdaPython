@@ -264,6 +264,7 @@ class TestMaybe(unittest.TestCase):
         }
 
         def change_some(_): state['some'] = True
+
         def change_nada(_): state['nada'] = True
 
         opt1 = Some(1).inspect(change_some)
@@ -286,6 +287,7 @@ class TestMaybe(unittest.TestCase):
         """Test Maybe.map_or_else()"""
 
         def add_one(x) -> int: return x + 1
+
         def default() -> int: return 20
 
         self.assertEqual(
@@ -303,6 +305,7 @@ class TestMaybe(unittest.TestCase):
         opt1 = Some(10)
         opt2 = Some(20)
         opt3 = Nada()
+
         def add(x: int, y: int) -> int: return x + y
 
         self.assertEqual(opt1.reduce(opt2, add), Some(30))
@@ -378,6 +381,7 @@ class TestMaybe(unittest.TestCase):
 
         with self.assertRaises(Exception):
             nada.value = 5
+
 
 if __name__ == '__main__':
     unittest.main()

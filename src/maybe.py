@@ -618,6 +618,7 @@ class Nada[T](Maybe[T]):
     def __init__(self):
         super().__init__(None)
 
+
 def maybeify[T, **P](fn: Callable[P, T | None]) -> Callable[P, Maybe[T]]:
     """
     Convert any function that could raise an Exception to a Maybe type,
@@ -638,6 +639,7 @@ def maybeify[T, **P](fn: Callable[P, T | None]) -> Callable[P, Maybe[T]]:
     :param fn: function to wrap
     :return: function converting exceptions to Maybe Nada types
     """
+
     @wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Maybe[T]:
         try:
