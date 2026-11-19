@@ -218,8 +218,8 @@ class TestResult(unittest.TestCase):
         res2 = Err("Error")
         func = lambda x: Ok(x * 3)
 
-        self.assertEqual(res1.and_then(func), Ok(3))
-        self.assertEqual(res2.and_then(func), Err("Error"))
+        self.assertEqual(res1.flat_map(func), Ok(3))
+        self.assertEqual(res2.flat_map(func), Err("Error"))
 
     def test_or_else(self):
         """Test Result.or_else()"""

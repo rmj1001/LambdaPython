@@ -1,7 +1,9 @@
+from dataclasses import dataclass
 from enum import StrEnum
 from functools import wraps
 from typing import Callable, NoReturn
 
+lazy from src.abstract.monad import Monad
 lazy from src.monads.maybe import Maybe, Some, Nada, MaybeException
 
 
@@ -19,14 +21,13 @@ class ResultVariant(StrEnum):
     ERR = 'Err'
 
 
-class Result[T, E]:
+@dataclass(frozen=True, repr=False)
+class Result[T, E](Monad[T]):
     """Rust-style result"""
+    _value: T | E
+    _state: ResultVariant
     __match_args__ = ('_value',)
     __slots__ = ('_value', '_state')
-
-    def __init__(self, value: T | E, state: ResultVariant = ResultVariant.OK):
-        self._value: T | E = value
-        self._state: ResultVariant = state
 
     @property
     def value(self) -> T | E:
@@ -60,6 +61,13 @@ class Result[T, E]:
         :return: True if state is Ok, else False
         """
         return self.is_ok()
+
+    def __hash__(self) -> int:
+        """
+        Create hash integer of Result monad
+        :return: int
+        """
+        return hash((self._value, self._state))
 
     def __repr__(self):
         """
@@ -112,28 +120,6 @@ class Result[T, E]:
             return NotImplemented
 
         return self.value != other._value or self.state != other._state
-
-    def and_then[U](self, fn: Callable[[T], Result[U, E]]) -> "Result[U,E]":
-        """
-        Return a new Result created from fn return if Result is Ok, else return self
-
-        Examples:
-
-        - Ok(1).and_then(lambda x: Ok(x + 1)) -> Ok(11)
-        - Err(1).and_then(lambda x: Ok(x + 1)) -> Err(1)
-
-        :param fn: function to create new Result from
-        :return: self if self is Err, else fn(Result.value)
-        """
-        match self:
-            case Ok(o):
-                return fn(o)
-
-            case Err(e):
-                return Err(e)
-
-            case _:
-                panic('Unreachable')
 
     def err(self) -> Maybe[E]:
         """
@@ -197,6 +183,28 @@ class Result[T, E]:
             case _:
                 panic('Unreachable')
 
+    def flat_map[U](self, fn: Callable[[T], Result[U, E]]) -> "Result[U,E]":
+        """
+        Return a new Result created from fn return if Result is Ok, else return self
+
+        Examples:
+
+        - Ok(1).flat_map(lambda x: Ok(x + 1)) -> Ok(11)
+        - Err(1).flat_map(lambda x: Ok(x + 1)) -> Err(1)
+
+        :param fn: function to create new Result from
+        :return: self if self is Err, else fn(Result.value)
+        """
+        match self:
+            case Ok(o):
+                return fn(o)
+
+            case Err(e):
+                return Err(e)
+
+            case _:
+                panic('Unreachable')
+
     def flatten(self, recurse: bool = False) -> "Result[T, E]":
         """
         Convert Result[Result[T,E],E] to Result[T,E].
@@ -235,7 +243,7 @@ class Result[T, E]:
             case _:
                 panic('Unreachable')
 
-    def inspect(self, fn: Callable[[T], None]) -> "Result[T, E]":
+    def inspect(self, fn: Callable[[T], object]) -> "Result[T, E]":
         """
         Calls fn with contained value if Ok. Always returns original Result.
 
@@ -250,15 +258,15 @@ class Result[T, E]:
         match self:
             case Ok(o):
                 fn(o)
-                return Ok(o)
+                return self
 
-            case Err(e):
-                return Err(e)
+            case Err():
+                return self
 
             case _:
                 panic('Unreachable')
 
-    def inspect_err(self, fn: Callable[[E], None]) -> Result[T, E]:
+    def inspect_err(self, fn: Callable[[E], object]) -> Result[T, E]:
         """
         Calls fn with contained value if Err. Always returns original Result.
 
@@ -270,12 +278,12 @@ class Result[T, E]:
         :return: Original result
         """
         match self:
-            case Ok(o):
-                return Ok(o)
+            case Ok():
+                return self
 
             case Err(e):
                 fn(e)
-                return Err(e)
+                return self
 
             case _:
                 panic('Unreachable')
@@ -302,7 +310,7 @@ class Result[T, E]:
         - Ok(1).into_err() -> Err(1)
         - Err(1).into_err() -> Err(1)
 
-        :return: Ok()
+        :return: Err()
         """
         return Err(self.value)
 
@@ -327,7 +335,7 @@ class Result[T, E]:
             case _:
                 panic('Unreachable')
 
-    def is_err_and(self, predicate: Callable[[T], bool]) -> bool:
+    def is_err_and(self, predicate: Callable[[E], bool]) -> bool:
         """
         Check that Result.state is Err, and predicate function
         returns True.
@@ -341,7 +349,13 @@ class Result[T, E]:
         :param predicate: Function taking Result.value as only argument, returns bool
         :return: True if Result.state is Err and predicate returns True, else False
         """
-        return self.is_err() and predicate(self.value)
+        match self:
+            case Ok(_):
+                return False
+            case Err(e):
+                return predicate(e)
+            case _:
+                panic('Unreachable')
 
     def is_ok(self) -> bool:
         """
@@ -518,7 +532,7 @@ class Result[T, E]:
             case _:
                 panic('Unreachable')
 
-    def other_if_ok(self, other: "Result[T, E]") -> "Result[T, E]":
+    def other_if_ok[U](self, other: "Result[U, E]") -> "Result[U, E]":
         """
         Return another Result if current Result is Ok, else return self
 
@@ -540,7 +554,7 @@ class Result[T, E]:
             case _:
                 panic('Unreachable')
 
-    def other_if_err(self, other: "Result[T, E]") -> "Result[T, E]":
+    def other_if_err[F](self, other: "Result[T, F]") -> "Result[T, F]":
         """
         Return another Result if current Result is Err, else return self
 
@@ -649,17 +663,21 @@ class Result[T, E]:
                 panic('Unreachable')
 
 
+@dataclass(frozen=True, repr=False)
 class Ok[T, E](Result[T, E]):
     """Create a Result[T, E] with an Ok variant"""
     __slots__ = ()
+    __match_args__ = ('_value',)
 
     def __init__(self, value: T) -> None:
         super().__init__(value, ResultVariant.OK)
 
 
+@dataclass(frozen=True, repr=False)
 class Err[T, E](Result[T, E]):
     """Create a Result[T, E] with an Err variant"""
     __slots__ = ()
+    __match_args__ = ('_value',)
 
     def __init__(self, error: E) -> None:
         super().__init__(error, ResultVariant.ERR)
@@ -697,7 +715,7 @@ def resultify[T, **P](fn: Callable[P, T]) -> Callable[P, Result[T, Exception]]:
     return wrapper
 
 
-def panic(message: str, maybe: bool = False) -> NoReturn:
+def panic(message: object, maybe: bool = False) -> NoReturn:
     """
     Raise a ResultException with the custom message string
 
