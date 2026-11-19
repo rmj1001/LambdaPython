@@ -1,7 +1,7 @@
 import unittest
 
-lazy from src.maybe import Some, Nada
-lazy from src.result import Result, Ok, Err, ResultException, ResultVariant, resultify
+lazy from src.monads.maybe import Some, Nada
+lazy from src.monads.result import Result, Ok, Err, ResultException, ResultVariant, resultify
 
 
 class TestResult(unittest.TestCase):

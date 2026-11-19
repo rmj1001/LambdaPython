@@ -1,7 +1,7 @@
 import unittest
 
-lazy from src.maybe import Maybe, Some, Nada, MaybeException, maybeify
-lazy from src.result import Ok, Err
+lazy from src.monads.maybe import Maybe, Some, Nada, MaybeException, maybeify
+lazy from src.monads.result import Ok, Err
 
 
 class TestMaybe(unittest.TestCase):
@@ -133,10 +133,10 @@ class TestMaybe(unittest.TestCase):
         opt2 = Nada()
         opt3 = Some(Some(Some(4)))
 
-        self.assertEqual(opt.flatten(all_inner=True), Some(1))
-        self.assertEqual(opt2.flatten(all_inner=True), Nada())
-        self.assertEqual(opt3.flatten(all_inner=True), Some(4))
-        self.assertEqual(opt3.flatten(all_inner=False), Some(Some(4)))
+        self.assertEqual(opt.flatten(recursive=True), Some(1))
+        self.assertEqual(opt2.flatten(recursive=True), Nada())
+        self.assertEqual(opt3.flatten(recursive=True), Some(4))
+        self.assertEqual(opt3.flatten(recursive=False), Some(Some(4)))
 
     def test_and_then(self):
         """Test Maybe.and_then()"""
@@ -153,7 +153,7 @@ class TestMaybe(unittest.TestCase):
         # Success Chains
         self.assertEqual(opt.and_then(add_one), Some(2))
         self.assertEqual(opt2.and_then(add_one), Nada())
-        self.assertEqual(opt3.flatten(all_inner=True).and_then(add_one), Some(5))
+        self.assertEqual(opt3.flatten(recursive=True).and_then(add_one), Some(5))
 
         # Failure Chain: Some -> Nada
         self.assertEqual(Some(2).and_then(fail_if_even), Nada())
