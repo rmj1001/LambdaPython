@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from dataclasses import FrozenInstanceError
-from unittest import TestCase
+from unittest import TestCase, main as umain
+
 from src.monads.writer import Writer
 
 
@@ -165,3 +166,7 @@ class TestWriter(TestCase):
             w.flat_map(f).flat_map(g),
             w.flat_map(lambda x: f(x).flat_map(g))
         )
+
+
+if __name__ == '__main__':
+    umain()
