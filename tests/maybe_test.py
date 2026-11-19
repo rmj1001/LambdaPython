@@ -151,12 +151,12 @@ class TestMaybe(unittest.TestCase):
             return Nada() if x % 2 == 0 else Some(x)
 
         # Success Chains
-        self.assertEqual(opt.and_then(add_one), Some(2))
-        self.assertEqual(opt2.and_then(add_one), Nada())
-        self.assertEqual(opt3.flatten(recursive=True).and_then(add_one), Some(5))
+        self.assertEqual(opt.flat_map(add_one), Some(2))
+        self.assertEqual(opt2.flat_map(add_one), Nada())
+        self.assertEqual(opt3.flatten(recursive=True).flat_map(add_one), Some(5))
 
         # Failure Chain: Some -> Nada
-        self.assertEqual(Some(2).and_then(fail_if_even), Nada())
+        self.assertEqual(Some(2).flat_map(fail_if_even), Nada())
 
     def test_ok_or(self):
         """Test Maybe.ok_or()"""

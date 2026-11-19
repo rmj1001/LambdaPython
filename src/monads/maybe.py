@@ -1,6 +1,8 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import wraps
 
+lazy from src.abstract.monad import Monad
 lazy from src.monads.result import Result, Ok, Err, panic
 
 
@@ -12,13 +14,12 @@ class MaybeException[E](Exception):
         super().__init__(self.message)
 
 
-class Maybe[T]:
+@dataclass(frozen=True)
+class Maybe[T](Monad[T]):
     """Rust-style option"""
-    __match_args__ = ('_value',)
+    _value: T | None
     __slots__ = ('_value',)
-
-    def __init__(self, value: T | None):
-        self._value: T | None = value
+    __match_args__ = ('_value',)
 
     @property
     def value(self) -> T:
@@ -43,22 +44,6 @@ class Maybe[T]:
         """
         return self.is_some()
 
-    def __repr__(self) -> str:
-        """
-        String representation of Maybe
-
-        Examples:
-
-        - str(Some(10)) -> 'Some(10)'
-        - str(Nada()) -> 'Nada'
-
-        :return: str(Maybe)
-        """
-        if self.value is not None:
-            return f"Some({self.value})"
-
-        return "Nada"
-
     def __eq__(self, other: object) -> bool:
         """
         Check if two Options are equal
@@ -78,6 +63,29 @@ class Maybe[T]:
 
         return (self.value == other.value) or (self.value is None and other.value is None)
 
+    def __hash__(self) -> int:
+        """
+        Create hash integer of Maybe monad
+        :return: int
+        """
+        return hash((type(self), self.value))
+
+    def __repr__(self) -> str:
+        """
+        String representation of Maybe
+
+        Examples:
+
+        - str(Some(10)) -> 'Some(10)'
+        - str(Nada()) -> 'Nada'
+
+        :return: str(Maybe)
+        """
+        if self.value is not None:
+            return f"Some({self.value})"
+
+        return "Nada"
+
     def __ne__(self, other: object) -> bool:
         """
         Check if two Options are not equal
@@ -96,26 +104,6 @@ class Maybe[T]:
             return NotImplemented
 
         return self.value != other.value
-
-    def and_then[U](self, fn: "Callable[[T], Maybe[U]]") -> "Maybe[U]":
-        """
-        Return a new Maybe created from fn return if Maybe is Some, else return Nada()
-
-        Examples:
-
-        - Some(1).and_then(lambda x: Some(x + 1)) -> Some(2)
-        - Nada().and_then(lambda x: Some(x + 1)) -> Nada()
-
-        :param fn: Function that takes one argument T and returns Maybe[U]
-        :return: Mapped Maybe
-        """
-        match self:
-            case Some(s):
-                return fn(s)
-            case Nada():
-                return Nada()
-            case _:
-                panic('Unreachable', maybe=True)
 
     def expect(self, message: str) -> T:
         """
@@ -161,6 +149,26 @@ class Maybe[T]:
             case _:
                 panic('Unreachable', maybe=True)
 
+    def flat_map[U](self, fn: "Callable[[T], Maybe[U]]") -> "Maybe[U]":
+        """
+        Return a new Maybe created from fn return if Maybe is Some, else return Nada()
+
+        Examples:
+
+        - Some(1).and_then(lambda x: Some(x + 1)) -> Some(2)
+        - Nada().and_then(lambda x: Some(x + 1)) -> Nada()
+
+        :param fn: Function that takes one argument T and returns Maybe[U]
+        :return: Mapped Maybe
+        """
+        match self:
+            case Some(s):
+                return fn(s)
+            case Nada():
+                return Nada()
+            case _:
+                panic('Unreachable', maybe=True)
+
     def flatten(self, recursive: bool = False) -> "Maybe[T]":
         """
         Return innermost Maybe in nested Options
@@ -189,7 +197,7 @@ class Maybe[T]:
             case _:
                 panic('Unreachable', maybe=True)
 
-    def inspect(self, fn: Callable[[T], None]) -> "Maybe[T]":
+    def inspect(self, fn: Callable[[T], object]) -> "Maybe[T]":
         """
         Calls fn with contained value if Some. Always returns original Maybe object.
 
@@ -204,9 +212,9 @@ class Maybe[T]:
         match self:
             case Some(s):
                 fn(s)
-                return Some(s)
+                return self
             case Nada():
-                return Nada()
+                return self
             case _:
                 panic('Unreachable', maybe=True)
 
@@ -600,9 +608,11 @@ class Maybe[T]:
                 panic('Unreachable', maybe=True)
 
 
+@dataclass(frozen=True, repr=False)
 class Some[T](Maybe[T]):
     """Creates a Maybe[T] with a non-None value"""
     __slots__ = ()
+    __match_args__ = ('_value',)
 
     def __init__(self, value: T):
         if value is None:
@@ -611,9 +621,11 @@ class Some[T](Maybe[T]):
         super().__init__(value)
 
 
+@dataclass(frozen=True, repr=False)
 class Nada[T](Maybe[T]):
     """Creates a Maybe[T] with a None value"""
     __slots__ = ()
+    __match_args__ = ()
 
     def __init__(self):
         super().__init__(None)
