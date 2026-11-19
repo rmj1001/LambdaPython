@@ -312,3 +312,10 @@ http-client.private.env.json
 
 # Kubernetes Plugin
 .idea/kubernetes/configs/kubeconfig_*
+/.idea/.gitignore
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/MonadicPython.iml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/vcs.xml
