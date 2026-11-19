@@ -2,7 +2,7 @@ from enum import StrEnum
 from functools import wraps
 from typing import Callable, NoReturn
 
-lazy from src.maybe import Maybe, Some, Nada, MaybeException
+lazy from src.monads.maybe import Maybe, Some, Nada, MaybeException
 
 
 class ResultException[E](Exception):

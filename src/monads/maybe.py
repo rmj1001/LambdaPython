@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from functools import wraps
 
-lazy from src.result import Result, Ok, Err, panic
+lazy from src.monads.result import Result, Ok, Err, panic
 
 
 class MaybeException[E](Exception):
